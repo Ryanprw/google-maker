@@ -87,7 +87,7 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
           }
         },
         child: const Icon(Icons.my_location),
-        tooltip: 'back to location',
+        tooltip: 'back to',
       ),
     );
   }
