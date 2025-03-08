@@ -1,10 +1,6 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lottie/lottie.dart' as lottie;
-import 'package:flutter/rendering.dart';
-import 'dart:typed_data';
-import 'dart:async';
 
 class GoogleMapScreen extends StatefulWidget {
   const GoogleMapScreen({super.key});
@@ -14,31 +10,31 @@ class GoogleMapScreen extends StatefulWidget {
 }
 
 class _GoogleMapScreenState extends State<GoogleMapScreen> {
-  LatLng myCurrentLocation = LatLng(-6.200000, 106.816666);
-  BitmapDescriptor? customIcon;
-  GlobalKey _lottieKey = GlobalKey();
+  final LatLng jakartaTimurLocation = const LatLng(-6.2253, 106.9002);
+  GoogleMapController? _mapController;
+  bool _isMapReady = false;
+  Set<Marker> _markers = {};
 
   @override
   void initState() {
     super.initState();
-    _setCustomMarker();
+    _setupMarkers();
   }
 
-  Future<void> _setCustomMarker() async {
-    final Uint8List? markerIcon = await _captureLottieAsBytes();
-    if (markerIcon != null) {
-      setState(() {
-        customIcon = BitmapDescriptor.fromBytes(markerIcon);
-      });
-    }
-  }
-
-  Future<Uint8List?> _captureLottieAsBytes() async {
-    RenderRepaintBoundary boundary =
-        _lottieKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-    ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    return byteData?.buffer.asUint8List();
+  void _setupMarkers() {
+    setState(() {
+      _markers = {
+        Marker(
+          markerId: const MarkerId("Location Id"),
+          position: jakartaTimurLocation,
+          alpha: 0.0,
+          infoWindow: const InfoWindow(
+            title: "Title of the location",
+            snippet: "More info about the location",
+          ),
+        ),
+      };
+    });
   }
 
   @override
@@ -48,38 +44,57 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: myCurrentLocation,
-              zoom: 15,
+              target: jakartaTimurLocation,
+              zoom: 14,
             ),
-            markers: {
-              Marker(
-                markerId: const MarkerId("Marker Id"),
-                position: myCurrentLocation,
-                draggable: true,
-                onDragEnd: (value) {},
-                icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                infoWindow: const InfoWindow(
-                  title: "Title of the maker",
-                  snippet: "More info about the maker",
-                ),
-              ),
+            onMapCreated: (GoogleMapController controller) {
+              setState(() {
+                _mapController = controller;
+                _isMapReady = true;
+              });
             },
+            markers: _markers,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            compassEnabled: true,
+            mapToolbarEnabled: true,
           ),
+          if (!_isMapReady) const Center(child: CircularProgressIndicator()),
 
-          Positioned(
-            top: -1000,
-            left: -1000,
-            child: RepaintBoundary(
-              key: _lottieKey,
-              child: SizedBox(
+          Align(
+            alignment: Alignment.center,
+            child: Transform.translate(
+              offset: const Offset(0, -30),
+              child: lottie.Lottie.asset(
+                'assets/location.json',
                 width: 100,
                 height: 100,
-                child: lottie.Lottie.asset("assets/location.json"),
+                fit: BoxFit.contain,
+                frameRate: lottie.FrameRate.max,
               ),
             ),
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (_mapController != null) {
+            _mapController!.animateCamera(
+              CameraUpdate.newCameraPosition(
+                CameraPosition(target: jakartaTimurLocation, zoom: 14),
+              ),
+            );
+          }
+        },
+        child: const Icon(Icons.my_location),
+        tooltip: 'back to location',
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
   }
 }
